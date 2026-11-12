@@ -1,0 +1,132 @@
+INVENTORY MOVEMENT RULES
+=======================
+
+These are the business rules the pipeline applies to every row of every file,
+for every product, warehouse and day. This file is the plain-English version.
+The rules are enforced in SQL here:
+
+  checks (rules R1-R11)   dbt_project/models/staging/stg_movements.sql
+  duplicates (rule D1)    dbt_project/models/intermediate/int_movements_classified.sql
+  daily balances (B1-B5)  dbt_project/models/marts/daily_inventory.sql
+
+Every input row ends up in exactly ONE of these outcomes:
+
+  KEEP       The row is valid. It is counted in stock exactly once.
+  TIDY       Harmless formatting is cleaned (spaces, upper/lower case, the
+             text "null"), then the row is checked like any other.
+             No value is ever guessed or invented.
+  REJECT     The row breaks a rule. It is NOT counted in stock. It is stored
+             in rejected_movements with the reason, for the operations team.
+  DUPLICATE  An exact repeat of a row already kept. It is NOT counted again.
+
+So:  rows in the files = KEEP + REJECT + DUPLICATE   (always; this is tested)
+
+
+------------------------------------------------------------------------------
+1. TIDY (applied before the checks)
+------------------------------------------------------------------------------
+T1  Leading/trailing spaces are removed from every field.
+        " P101 "       ->  "P101"
+T2  movement_type is compared in lower case.
+        "Receipt"      ->  "receipt"
+T3  An empty field, or the text "null"/"NULL", means the value is missing.
+        ""  or "null"  ->  missing  (then rule R2 rejects it)
+
+(The sample files do not contain T1/T2 cases; the rules still apply.)
+
+
+------------------------------------------------------------------------------
+2. CHECKS (in this order - the FIRST rule a row breaks is its reason)
+------------------------------------------------------------------------------
+Rule  Reject reason                 What is checked                         Example row (from data/fixture/batch_001.csv)
+----  ----------------------------  --------------------------------------  ----------------------------------------------
+R1    missing_movement_id           movement_id present                     (no example in the sample)
+R2    missing_product_id            product_id present                      M005, [empty], W01, receipt, 8      -> REJECT
+R3    missing_warehouse_id          warehouse_id present                    (no example in the sample)
+R4    missing_movement_type         movement_type present                   (no example in the sample)
+R5    missing_quantity              quantity present                        (no example in the sample)
+R6    missing_event_timestamp       event_timestamp present                 (no example in the sample)
+R7    invalid_movement_type         type is receipt, shipment or adjustment M009, P102, W02, transfer, 3        -> REJECT
+R8    non_integer_quantity          quantity is a whole number              M012, P101, W02, receipt, 2.5       -> REJECT
+R9    unparseable_event_timestamp   timestamp is a real date and time,      M013, P102, W02, receipt, 5,
+                                    'YYYY-MM-DD HH:MM:SS' or                      "not-a-timestamp"             -> REJECT
+                                    'YYYY-MM-DDTHH:MM:SS'
+R10   non_positive_quantity         receipt/shipment quantity is > 0        M010, P101, W01, shipment, 0        -> REJECT
+R11   zero_adjustment_quantity      adjustment quantity is not 0            M011, P102, W01, adjustment, 0      -> REJECT
+                                    (adjustments may be + or -)
+
+A row that passes R1-R11 is valid:
+      M001, P101, W01, receipt,    20, 2026-03-01 09:00:00                  -> KEEP
+      M003, P101, W01, adjustment, -2, 2026-03-02 10:00:00                  -> KEEP (negative adjustment is allowed)
+      M014, P102, W02, receipt,     6, 2026-03-04T10:00:00                  -> KEEP ('T' format is allowed)
+
+Why "first rule wins": each rejected row gets one clear reason, and the order
+puts "is anything missing?" before "is the value wrong?".
+Every copy of an invalid row is rejected separately (two bad copies = two rejects).
+
+
+------------------------------------------------------------------------------
+3. DUPLICATES
+------------------------------------------------------------------------------
+D1  Among VALID rows only, the first row seen for a movement_id is KEPT;
+    every later row with the same movement_id is a DUPLICATE.
+    "First" = earliest file loaded, then earliest row in that file.
+
+        batch_001.csv row 2   M002, P101, W01, shipment, 5, 2026-03-01 14:00:00   -> KEEP
+        batch_001.csv row 3   M002, P101, W01, shipment, 5, 2026-03-01 14:00:00   -> DUPLICATE of row 2
+        batch_002_late row 3  M002, P101, W01, shipment, 5, 2026-03-01 14:00:00   -> DUPLICATE of row 2
+                              (same movement re-sent in a later file)
+
+D2  Duplicates must be EXACT copies. If a repeated movement_id has different
+    values, that is a conflicting version - out of scope for this exercise.
+    The pipeline does not guess which one is right; a dbt test fails instead.
+
+
+------------------------------------------------------------------------------
+4. VALUES DERIVED FOR KEPT ROWS
+------------------------------------------------------------------------------
+V1  signed_quantity:   receipt = +quantity
+                       shipment = -quantity
+                       adjustment = quantity as given (already + or -)
+V2  business_date:     the calendar date of event_timestamp in UTC.
+                       Timestamps have no time zone and are treated as UTC.
+
+
+------------------------------------------------------------------------------
+5. DAILY INVENTORY (one row per product + warehouse + day)
+------------------------------------------------------------------------------
+B1  Stock starts at 0 for every product + warehouse.
+B2  Rows run from that product + warehouse's FIRST kept movement up to the
+    LATEST business date in the whole dataset - including days with no
+    movements (their totals are 0 and the balance is carried forward).
+B3  received and shipped are positive daily totals; adjustment is a signed total.
+B4  closing = opening + received - shipped + adjustment
+    opening = the previous day's closing (0 on the first day)
+B5  Negative stock is allowed but flagged: negative_balance = closing < 0.
+
+    Example, P101 at W01 (first file only):
+      date        opening  received  shipped  adjustment  closing  negative
+      2026-03-01        0        20        5           0       15  no
+      2026-03-02       15         0        0          -2       13  no
+      2026-03-03       13         0       30           0      -17  YES
+      2026-03-04      -17         0        0           0      -17  YES   (no movements that day)
+
+
+------------------------------------------------------------------------------
+6. LATE MOVEMENTS
+------------------------------------------------------------------------------
+L1  A movement belongs to its business date, not the day its file arrived.
+L2  When a late movement arrives, its own day AND every later day for that
+    product + warehouse are recalculated. Earlier days do not change.
+
+        Late file adds  M015, P101, W01, receipt, 10, 2026-03-02 15:00:00
+        P101/W01 closing   before: 15, 13, -17, -17
+                           after:  15, 23,  -7,  -7
+
+
+------------------------------------------------------------------------------
+7. NOT DONE ON PURPOSE
+------------------------------------------------------------------------------
+- Values are never "fixed" by guessing (e.g. 2.5 is not rounded to 2).
+- No check that a product or warehouse exists in a master list.
+- Timestamps with a time-zone offset (e.g. +02:00) are rejected, not converted.

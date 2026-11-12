@@ -1,0 +1,38 @@
+version: 2
+
+seeds:
+  - name: expected_daily_inventory
+    description: Hand-calculated daily balances for data/fixture, before and after the late batch.
+    config:
+      column_types:
+        stage: varchar
+        product_id: varchar
+        warehouse_id: varchar
+        inventory_date: date
+        opening_quantity: bigint
+        received_quantity: bigint
+        shipped_quantity: bigint
+        adjustment_quantity: bigint
+        closing_quantity: bigint
+        negative_balance: boolean
+
+  - name: expected_movement_counts
+    description: Expected raw / accepted / rejected / duplicate row counts for data/fixture.
+    config:
+      column_types:
+        stage: varchar
+        raw_rows: bigint
+        accepted_rows: bigint
+        rejected_rows: bigint
+        duplicate_rows: bigint
+
+  - name: expected_row_status
+    description: Every fixture row that is NOT accepted, with the expected status and reason.
+    config:
+      column_types:
+        stage: varchar
+        raw_row_id: varchar
+        movement_id: varchar
+        row_status: varchar
+        rejection_reason: varchar
+        duplicate_of_raw_row_id: varchar

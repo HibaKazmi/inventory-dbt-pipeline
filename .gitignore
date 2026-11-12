@@ -1,0 +1,10 @@
+@'
+.venv/
+results/
+*.duckdb
+*.duckdb.wal
+__pycache__/
+.user.yml
+Project.pdf
+loom_script.md
+'@ | Out-File -Encoding utf8 .gitignore
