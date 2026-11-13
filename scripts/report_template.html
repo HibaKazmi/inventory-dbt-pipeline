@@ -134,7 +134,7 @@ const stage = () => STAGES[state.stage];
 const prevStage = () => state.stage > 0 ? STAGES[state.stage - 1] : null;
 const label = n => n.kind === "source" ? n.relation : n.name;
 const kindOf = n => n.kind === "files" ? "files" : n.kind === "source" ? "source" : (n.materialized === "view" ? "view" : "table");
-const kindLabel = n => n.kind === "files" ? "loaded by scripts/load_raw.py" : n.kind === "source" ? "raw table" : n.materialized === "view" ? "view" : "table";
+const kindLabel = n => n.kind === "files" ? "loaded by loader/load_raw.py" : n.kind === "source" ? "raw table" : n.materialized === "view" ? "view" : "table";
 const FILES_ID = "files";
 function graphNodes(){
   const g = Object.entries(NODES).filter(([,n]) => n.kind === "model" || n.kind === "source").map(([id,n]) => ({id, ...n, layer: n.layer + 1}));
@@ -239,12 +239,12 @@ function renderDetail(){
   if (!state.node || !g.find(n => n.id === state.node)) state.node = (g.find(n => n.name === "daily_inventory") || g[0]).id;
   const n = g.find(x => x.id === state.node), st = stage();
   const key = n.kind === "source" ? n.relation : n.kind === "files" ? "files" : n.name;
-  const loader = REPO.find(f => f.path === "scripts/load_raw.py");
+  const loader = REPO.find(f => f.path === "loader/load_raw.py");
   if (n.kind === "files"){
     const files = REPO.filter(f => /^data\/fixture\/batch_.*\.csv$/.test(f.path));
     document.getElementById("detail").innerHTML = `
       <div class="row"><h2>CSV files</h2><span class="chip plain">input</span></div>
-      <p class="what-line">${esc(WHAT.files)}, loaded by <code>scripts/load_raw.py</code>.</p>
+      <p class="what-line">${esc(WHAT.files)}, loaded by <code>loader/load_raw.py</code>.</p>
       ${files.map(f => `<h3 class="small mono" style="margin:0">${esc(f.path)}</h3>${codeBlock(f.content, false)}`).join("")}`;
     return;
   }

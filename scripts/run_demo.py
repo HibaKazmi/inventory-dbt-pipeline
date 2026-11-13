@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DBT_DIR = ROOT / "dbt_project"
 QUERIES = ROOT / "queries"
 RESULTS = ROOT / "results"
-DB = ROOT / "warehouse.duckdb"
+DB = DBT_DIR / "warehouse.duckdb"
 ENV = {**os.environ, "DUCKDB_PATH": str(DB), "PYTHONIOENCODING": "utf-8"}
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -110,7 +110,7 @@ def read_run_results() -> None:
 
 
 def load(*paths: Path) -> None:
-    run([sys.executable, str(ROOT / "scripts" / "load_raw.py"), "--db", str(DB), *map(str, paths)])
+    run([sys.executable, str(ROOT / "loader" / "load_raw.py"), "--db", str(DB), *map(str, paths)])
 
 
 def fmt(v) -> str:

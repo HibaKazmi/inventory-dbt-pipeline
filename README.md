@@ -5,8 +5,6 @@ daily inventory balances, built with dbt Core on DuckDB.
 
 Loom walkthrough: _add link here_
 
-Every `dbt build` rebuilds all models from the raw data.
-
 ## Versions
 
 | | |
@@ -16,6 +14,22 @@ Every `dbt build` rebuilds all models from the raw data.
 | dbt-duckdb | 1.11.1 |
 | DuckDB | 2.0.0 |
 
+## Layout
+
+The pipeline runs in this order:
+
+```
+generator/      1. writes the input CSV files
+data/fixture/   2. the input files (hand-made rows with known results)
+loader/         3. loads the CSV files into DuckDB, as text
+dbt_project/    4. all transformations and tests
+  models/staging/        type the fields, check the rules
+  models/intermediate/   accepted / rejected / duplicate, daily totals
+  models/marts/          clean_movements, rejected_movements, daily_inventory
+queries/        5. the two reporting queries
+scripts/        optional: runs steps 1-5 in one go and builds an HTML report
+```
+
 ## Setup
 
 ```
@@ -24,34 +38,41 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-No credentials needed. `dbt_project/profiles.yml` points to a local DuckDB file.
+No credentials needed. `dbt_project/profiles.yml` points to `dbt_project/warehouse.duckdb`.
 
-## Run
+## Run step by step
 
-```
-python scripts/run_demo.py
-```
-
-This generates the fixture, loads it, runs `dbt build`, reruns the same input,
-loads the late batch and a later-dated batch, runs the two reporting queries and
-checks everything against the expected results. Output goes to `results/`.
-
-Step by step:
+From the repo root:
 
 ```
 python generator/generate_data.py fixture --out data/fixture
-python scripts/load_raw.py --db warehouse.duckdb data/fixture/batch_001.csv
-dbt build --project-dir dbt_project --profiles-dir dbt_project --vars "{fixture_stage: initial}"
-python scripts/load_raw.py --db warehouse.duckdb data/fixture/batch_002_late.csv
-dbt build --project-dir dbt_project --profiles-dir dbt_project --vars "{fixture_stage: after_late}"
+python loader/load_raw.py --db dbt_project/warehouse.duckdb data/fixture/batch_001.csv
+cd dbt_project
+dbt debug
+dbt build --vars "{fixture_stage: initial}"
 ```
 
-Larger sample: `python scripts/run_demo.py --dataset sample --rows 50000`
+Late batch, then a batch with a later date (still inside `dbt_project/`):
+
+```
+python ../loader/load_raw.py --db warehouse.duckdb ../data/fixture/batch_002_late.csv
+dbt build --vars "{fixture_stage: after_late}"
+python ../loader/load_raw.py --db warehouse.duckdb ../data/fixture/batch_003_extend.csv
+dbt build --vars "{fixture_stage: after_extend}"
+```
+
+`--vars` turns on the tests that compare the output with the expected results
+for that stage. Leave it out for any other data.
+
+The reporting queries are in `queries/`. Run them against
+`dbt_project/warehouse.duckdb`, replacing `$start_date` and `$end_date` with dates.
+
+All steps at once: `python scripts/run_demo.py` (writes `results/`, including `pipeline_report.html`).
 
 ## Models
 
 ```
-raw.raw_movements          loaded by scripts/load_raw.py, all columns as text
+raw.raw_movements          loaded by loader/load_raw.py, all columns as text
 stg_movements              view    types the fields, adds rejection_reason
 int_movements_classified   table   accepted / rejected / duplicate per row
 clean_movements            table   accepted movements with signed_quantity
@@ -71,8 +92,6 @@ daily_inventory            table   one row per product, warehouse and day
 - Daily rows run from each product/warehouse's first valid movement to the last movement date in the data.
 
 ## Fixture
-
-`data/fixture/` has three files with known results:
 
 | After | raw | accepted | rejected | duplicate | daily rows |
 |---|---|---|---|---|---|
@@ -102,7 +121,14 @@ movement changes its own date and every later date.
 
 ## Data volume
 
-Fixture: 20 rows. Sample: _fill in from `results/sample_summary.json`_.
+Fixture: 20 rows. Sample: _fill in_.
+
+```
+python generator/generate_data.py sample --out data/sample --rows 50000
+python loader/load_raw.py --db dbt_project/warehouse.duckdb data/sample
+cd dbt_project
+dbt build
+```
 
 ## Limitation
 
@@ -110,6 +136,3 @@ Fixture: 20 rows. Sample: _fill in from `results/sample_summary.json`_.
 slower as data grows. The next step would be incremental models: give each
 loaded file a load_id, process only new load_ids, and rebuild balances only from
 the earliest changed date for the affected product and warehouse.
-
-`results/pipeline_report.html` shows the lineage, SQL and output of each model
-for the last run.

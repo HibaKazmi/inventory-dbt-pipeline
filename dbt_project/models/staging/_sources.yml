@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: raw
-    description: Files exactly as received, loaded by scripts/load_raw.py. Never modified by dbt.
+    description: Files exactly as received, loaded by loader/load_raw.py. Never modified by dbt.
     schema: raw
     tables:
       - name: raw_movements

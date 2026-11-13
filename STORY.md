@@ -48,7 +48,7 @@ with them.
 
 ## 4. Landing the files (Load)
 
-`scripts/load_raw.py` copies each CSV into the table `raw.raw_movements`
+`loader/load_raw.py` copies each CSV into the table `raw.raw_movements`
 **exactly as received**, every column as text, plus the file name, row number
 and a `load_id`. Nothing is cleaned yet, so a reviewer can always see the original row.
 
