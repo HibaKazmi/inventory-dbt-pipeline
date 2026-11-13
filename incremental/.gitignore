@@ -1,9 +1,0 @@
-*.duckdb
-*.duckdb.wal
-dbt_project/target/
-dbt_project/logs/
-dbt_project/dbt_packages/
-logs/
-data/sample/
-__pycache__/
-.venv/
