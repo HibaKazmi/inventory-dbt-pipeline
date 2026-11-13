@@ -134,7 +134,7 @@ const stage = () => STAGES[state.stage];
 const prevStage = () => state.stage > 0 ? STAGES[state.stage - 1] : null;
 const label = n => n.kind === "source" ? n.relation : n.name;
 const kindOf = n => n.kind === "files" ? "files" : n.kind === "source" ? "source" : (n.materialized === "view" ? "view" : "table");
-const kindLabel = n => n.kind === "files" ? "loaded by scripts/load_raw.py" : n.kind === "source" ? "raw table" : n.materialized === "view" ? "view" : n.materialized === "incremental" ? "incremental table" : "table";
+const kindLabel = n => n.kind === "files" ? "loaded by scripts/load_raw.py" : n.kind === "source" ? "raw table" : n.materialized === "view" ? "view" : "table";
 const FILES_ID = "files";
 function graphNodes(){
   const g = Object.entries(NODES).filter(([,n]) => n.kind === "model" || n.kind === "source").map(([id,n]) => ({id, ...n, layer: n.layer + 1}));

@@ -5,10 +5,7 @@ daily inventory balances, built with dbt Core on DuckDB.
 
 Loom walkthrough: _add link here_
 
-## Folders
-
-- `full_refresh/` - main solution. Every `dbt build` rebuilds all models from the raw data.
-- `incremental/` - same models as incremental models that only process new files.
+Every `dbt build` rebuilds all models from the raw data.
 
 ## Versions
 
@@ -17,14 +14,14 @@ Loom walkthrough: _add link here_
 | Python | 3.13.7 |
 | dbt-core | 1.12.7 |
 | dbt-duckdb | 1.11.1 |
-| DuckDB | _fill in_ |
+| DuckDB | 2.0.0 |
 
 ## Setup
 
 ```
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r full_refresh/requirements.txt
+pip install -r requirements.txt
 ```
 
 No credentials needed. `dbt_project/profiles.yml` points to a local DuckDB file.
@@ -32,7 +29,6 @@ No credentials needed. `dbt_project/profiles.yml` points to a local DuckDB file.
 ## Run
 
 ```
-cd full_refresh
 python scripts/run_demo.py
 ```
 
@@ -68,7 +64,7 @@ daily_inventory            table   one row per product, warehouse and day
 ## Assumptions
 
 - Timestamps have no time zone and are treated as UTC. Business date is the UTC date.
-- Each rejected row gets one reason: the first rule it fails, in the order listed in `full_refresh/rules.txt`.
+- Each rejected row gets one reason: the first rule it fails, in the order listed in `rules.txt`.
 - Duplicates are checked only among valid rows. The first copy by load order is kept.
 - Only exact duplicates are expected. A repeated movement_id with different values fails a test.
 - `movement_type` is trimmed and lower-cased before checking.
@@ -111,8 +107,9 @@ Fixture: 20 rows. Sample: _fill in from `results/sample_summary.json`_.
 ## Limitation
 
 `daily_inventory` is recalculated over the full history on every run, so it gets
-slower as data grows. `incremental/` shows the next step: process only new
-files and rebuild balances from the earliest changed date.
+slower as data grows. The next step would be incremental models: give each
+loaded file a load_id, process only new load_ids, and rebuild balances only from
+the earliest changed date for the affected product and warehouse.
 
 `results/pipeline_report.html` shows the lineage, SQL and output of each model
 for the last run.

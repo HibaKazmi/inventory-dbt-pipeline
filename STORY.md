@@ -107,4 +107,4 @@ the hand-calculated answer.
 
 This version recalculates all history on every run. That is simple and always
 correct, but slower as history grows. The next step is **incremental**
-processing: only recalculate from the earliest date that changed (see `../incremental`).
+processing: only recalculate from the earliest date that changed.

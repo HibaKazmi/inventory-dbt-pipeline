@@ -13,7 +13,6 @@ from pathlib import Path
 
 import duckdb
 
-FLAVOUR = "full_refresh"
 ROOT = Path(__file__).resolve().parents[1]
 DBT_DIR = ROOT / "dbt_project"
 QUERIES = ROOT / "queries"
@@ -26,7 +25,7 @@ import build_report
 
 checks: list[tuple[str, bool, str]] = []
 
-REPORT: dict = {"flavour": FLAVOUR, "stages": [], "log": [], "reports": {}, "late_changes": None}
+REPORT: dict = {"stages": [], "log": [], "reports": {}, "late_changes": None}
 current_step = {"title": ""}
 last_dbt_results: list[dict] = []
 
@@ -283,12 +282,6 @@ def fixture_flow() -> None:
                   "batch_003_extend.csv loaded (2 rows dated 03-05, after everything loaded so far).", s5)
     run_reports("after_extend", "2026-03-01", "2026-03-05", expected_dir)
 
-    if FLAVOUR == "incremental":
-        banner("6. dbt build --full-refresh must equal the incremental result")
-        dbt("build", "--full-refresh", stage="after_extend")
-        s6 = snapshot()
-        check("full refresh equals incremental result", s5 == s6, describe(s6))
-
 
 def fixture_initial_reports() -> None:
     banner("Reporting queries on the initial stage (fresh rebuild of batch_001 only)")
@@ -330,12 +323,8 @@ def sample_flow(args) -> None:
     check("sample counts match generator manifest", s3["counts"] == expected,
           f"actual {s3['counts']} expected {expected}")
     capture_stage("after_late", "3. Late batch", "Late file loaded.", s3)
-    if FLAVOUR == "incremental":
-        t4 = dbt("build", "--full-refresh")
-        s4 = snapshot()
-        check("sample full refresh equals incremental result", s3 == s4, f"full refresh {t4:.1f}s")
 
-    summary = {"flavour": FLAVOUR, "raw_rows": s3["counts"]["raw"], "clean_movements": s3["clean_rows"],
+    summary = {"raw_rows": s3["counts"]["raw"], "clean_movements": s3["clean_rows"],
                "daily_inventory_rows": len(s3["daily"]), "first_build_s": round(t1, 1),
                "rerun_build_s": round(t2, 1), "late_batch_build_s": round(t3, 1)}
     (RESULTS / "sample_summary.json").write_text(json.dumps(summary, indent=2))
@@ -350,7 +339,7 @@ def reset_db() -> None:
 
 
 def write_report(dataset: str) -> None:
-    lines = [f"# Demo results ({FLAVOUR})", "", "| Check | Result | Detail |", "|---|---|---|"]
+    lines = ["# Demo results", "", "| Check | Result | Detail |", "|---|---|---|"]
     lines += [f"| {n} | {'PASS' if ok else 'FAIL'} | {d} |" for n, ok, d in checks]
     (RESULTS / "demo_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 

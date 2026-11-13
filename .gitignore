@@ -1,10 +1,13 @@
-@'
 .venv/
-results/
+__pycache__/
 *.duckdb
 *.duckdb.wal
-__pycache__/
+results/
+logs/
+data/sample/
+dbt_project/target/
+dbt_project/logs/
+dbt_project/dbt_packages/
 .user.yml
 Project.pdf
 loom_script.md
-'@ | Out-File -Encoding utf8 .gitignore
