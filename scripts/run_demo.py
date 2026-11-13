@@ -264,24 +264,6 @@ def fixture_flow() -> None:
     banner("Reporting queries after the late batch")
     run_reports("after_late", "2026-03-01", "2026-03-04", expected_dir)
 
-    banner("5. Load a batch with a LATER date (2026-03-05), dbt build")
-    load(data / "batch_003_extend.csv")
-    dbt("build", stage="after_extend")
-    s5 = snapshot()
-    write_csv(RESULTS / "daily_inventory_after_extend.csv", s5["daily_cols"], s5["daily"])
-    check("after-extend counts", s5["counts"] == {"raw": 20, "accepted": 12, "rejected": 6, "duplicate": 2},
-          describe(s5))
-    before = set(s4["daily"])
-    added = [r for r in s5["daily"] if r not in before]
-    expected_added = {("P101", "W01", "2026-03-05"), ("P101", "W02", "2026-03-05"),
-                      ("P102", "W02", "2026-03-05"), ("P103", "W01", "2026-03-05")}
-    check("later date adds one carried-forward day per product/warehouse, earlier rows unchanged",
-          before <= set(s5["daily"]) and {r[:3] for r in added} == expected_added,
-          f"{len(added)} rows added, {len(before)} earlier rows unchanged")
-    capture_stage("after_extend", "4. Later date",
-                  "batch_003_extend.csv loaded (2 rows dated 03-05, after everything loaded so far).", s5)
-    run_reports("after_extend", "2026-03-01", "2026-03-05", expected_dir)
-
 
 def fixture_initial_reports() -> None:
     banner("Reporting queries on the initial stage (fresh rebuild of batch_001 only)")

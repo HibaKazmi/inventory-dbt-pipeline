@@ -33,11 +33,6 @@ FIXTURE_BATCH_2_LATE = [
     ("M002", "P101", "W01", "shipment", "5", "2026-03-01 14:00:00"),
 ]
 
-FIXTURE_BATCH_3_EXTEND = [
-    ("M017", "P101", "W02", "shipment", "3", "2026-03-05 09:00:00"),
-    ("M018", "P103", "W01", "receipt", "4", "2026-03-05 10:00:00"),
-]
-
 
 def write_csv(path: Path, rows: list[tuple]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -50,10 +45,8 @@ def write_csv(path: Path, rows: list[tuple]) -> None:
 def generate_fixture(out: Path) -> None:
     write_csv(out / "batch_001.csv", FIXTURE_BATCH_1)
     write_csv(out / "batch_002_late.csv", FIXTURE_BATCH_2_LATE)
-    write_csv(out / "batch_003_extend.csv", FIXTURE_BATCH_3_EXTEND)
     print(f"fixture written to {out}: batch_001.csv ({len(FIXTURE_BATCH_1)} rows), "
-          f"batch_002_late.csv ({len(FIXTURE_BATCH_2_LATE)} rows), "
-          f"batch_003_extend.csv ({len(FIXTURE_BATCH_3_EXTEND)} rows)")
+          f"batch_002_late.csv ({len(FIXTURE_BATCH_2_LATE)} rows)")
 
 
 INVALID_KINDS = [

@@ -40,7 +40,6 @@ I hand-wrote a small set of rows where I already know the right answer: the
 | 03-02 for P102/W02 | no movements that day | still gets a row |
 | *later file:* M015 dated 03-02 | late | changes 03-02 and every day after |
 | *later file:* M002 again | re-sent | duplicate |
-| *third file:* M017, M018 dated 03-05 | after everything so far | one new carried-forward day for every product/warehouse |
 
 The expected results are written down **before** running anything
 (`dbt_project/seeds/expected_*.csv`), and dbt tests compare the real output
@@ -99,9 +98,6 @@ the hand-calculated answer.
 * **Late file:** its movements land on their real date. Because the balance is a
   running total recalculated on every build, that day and every later day update.
   P101/W01 goes from 15, 13, −17, −17 to 15, **23, −7, −7**.
-* **A file with a later date (03-05):** the calendar grows by one day. Every
-  product/warehouse gets a 03-05 row carrying its balance forward, a new product
-  (P103 at W01) appears, and nothing earlier changes.
 
 ## 11. What I would do next
 

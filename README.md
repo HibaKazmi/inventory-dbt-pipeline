@@ -52,13 +52,11 @@ dbt debug
 dbt build --vars "{fixture_stage: initial}"
 ```
 
-Late batch, then a batch with a later date (still inside `dbt_project/`):
+Late batch (still inside `dbt_project/`):
 
 ```
 python ../loader/load_raw.py --db warehouse.duckdb ../data/fixture/batch_002_late.csv
 dbt build --vars "{fixture_stage: after_late}"
-python ../loader/load_raw.py --db warehouse.duckdb ../data/fixture/batch_003_extend.csv
-dbt build --vars "{fixture_stage: after_extend}"
 ```
 
 `--vars` turns on the tests that compare the output with the expected results
@@ -97,7 +95,6 @@ daily_inventory            table   one row per product, warehouse and day
 |---|---|---|---|---|---|
 | batch_001 | 15 | 8 | 6 | 1 | 11 |
 | batch_002_late | 18 | 10 | 6 | 2 | 11 |
-| batch_003_extend | 20 | 12 | 6 | 2 | 15 |
 
 P101 at W01 closes at 15, 13, -17, -17 after the first file, and 15, 23, -7, -7
 after the late file. Expected rows are in `dbt_project/seeds/` and
@@ -121,7 +118,7 @@ movement changes its own date and every later date.
 
 ## Data volume
 
-Fixture: 20 rows. Sample: _fill in_.
+Fixture: 18 rows. Sample: _fill in_.
 
 ```
 python generator/generate_data.py sample --out data/sample --rows 50000
