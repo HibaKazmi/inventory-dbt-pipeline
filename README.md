@@ -3,7 +3,7 @@
 Batch pipeline that turns warehouse movement files into validated movements and
 daily inventory balances, built with dbt Core on DuckDB.
 
-Loom walkthrough: _add link here_
+Loom walkthrough: https://www.loom.com/share/d53172f7f05f42878fb9c5fa92397b26, https://www.loom.com/share/53f1e88ef71045b1afc04fd0c831b0bb, https://www.loom.com/share/77460c8c6b9d452a804b2e6c72063348 (3 videos of 5 mins each, making it 15mins altogether.)
 
 ## Versions
 
